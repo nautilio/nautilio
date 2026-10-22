@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
-.PHONY: help install demo capture status anuncios lint format-check test check clean
+.PHONY: help install demo capture status anuncios eco lint format-check test check clean
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -20,6 +20,9 @@ status: ## Cuenta los documentos del Inferno, el Purgatorio y el Paradiso
 
 anuncios: ## Le Muse: analiza los anuncios de una marca (MARCA=<marca>)
 	uv run paquete_plantilla anuncios "$(MARCA)"
+
+eco: ## L'Eco: lo que los motores dicen de la marca (MARCA=<marca> COMPETIDORES="a,b")
+	uv run paquete_plantilla eco "$(MARCA)" --competidores "$(COMPETIDORES)"
 
 lint: ## Ejecuta el linter del proyecto
 	uv run ruff check .

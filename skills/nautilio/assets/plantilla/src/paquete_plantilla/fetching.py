@@ -145,7 +145,7 @@ class PoliteFetcher:
                 error=f"{len(content)} bytes supera el limite de {MAX_BYTES}",
             )
 
-        content_type = str(response.headers.get("Content-Type", ""))
+        content_type = _header(response, "Content-Type")
         return FetchResult(
             seed=seed,
             status="ok",
@@ -208,6 +208,16 @@ class PoliteFetcher:
         remaining = self.delay_seconds - elapsed
         if remaining > 0:
             self._sleep(remaining)
+
+
+def _header(response: Any, nombre: str) -> str:
+    # El cliente HTTP entrega las cabeceras en minuscula; HTTP no distingue mayusculas.
+    headers = getattr(response, "headers", None) or {}
+    buscado = nombre.lower()
+    for clave, valor in headers.items():
+        if str(clave).lower() == buscado:
+            return str(valor)
+    return ""
 
 
 def _response_body(response: Any) -> bytes:

@@ -25,6 +25,7 @@ uv run pytest -q
 make capture                    # Il Viaggio: cruza La Porta antes de ejecutarlo
 make status
 make anuncios MARCA=competidor  # Le Muse
+make eco MARCA="Marca" COMPETIDORES="a,b"  # L'Eco
 make check                      # Il Giudizio
 ```
 

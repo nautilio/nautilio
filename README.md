@@ -28,12 +28,15 @@ olvido y sale con lo que se puede citar.
 
 ## El viaje
 
-Nautilio tiene dos brazos.
+Nautilio tiene tres brazos.
 
 - **Il Viaggio** (`make capture`): baja del sitio público solo lo que tiene permiso de
   bajar, lo limpia y lo deja citable, página por página y con su fuente.
 - **Le Muse** (`make anuncios`): lee los anuncios públicos de una marca para aprender de
   sus ganchos, ángulos y guiones. *Inspírate, no copies.*
+- **L'Eco** (`make eco`): escucha lo que los asistentes de IA responden sobre la marca.
+  Mide si la recomiendan, si usan su sitio como fuente y en qué preguntas gana la
+  competencia, y dice si el Paradiso ya tiene la página que responde.
 
 <p align="center">
     <img alt="El mapa del viaje: Il Viaggio y Le Muse" src="docs/assets/flujo.svg">
@@ -52,6 +55,10 @@ Nautilio tiene dos brazos.
 | **Paradiso** | Lo citable: cada línea con su fuente. |
 | **Limbo** | Lo que no se puede leer sin un navegador espera revisión humana. |
 | **Raccolta · Conteggio · Lettura · Ispirazione** | Los cuatro pasos de Le Muse: recoger, contar, leer e inventar algo propio. |
+| **Il Ritratto** | El retrato de la marca: contexto, foco y cómo quiere ser descrita. |
+| **Le Domande** | Las preguntas que hace la gente, sin nombrar la marca. |
+| **L'Ascolto** | Lo que responden los asistentes, contado por el código. |
+| **La Risposta** | Cada brecha cruzada con el Paradiso: reforzar o escribir. |
 | **Il Giudizio** | La revisión final antes de publicar nada (`make check`). |
 
 ## Instalación
@@ -77,6 +84,7 @@ Dominio:   ejemplo.com
 Semillas:  https://ejemplo.com/
            https://ejemplo.com/quienes-somos
 Marca:     competidor-demo
+Competidores: rival-uno, rival-dos
 Destino:   ./empresa-demo
 Contacto:  tu-correo@tu-dominio.edu   (el tuyo, nunca uno de la empresa)
 ```
@@ -98,6 +106,8 @@ Caronte      negó el paso y detuvo el viaje; 1 página quedó sin visitar
 Purgatorio   el Lete borró 4 datos personales: 2 correos, 1 teléfono y 1 identificación
 Paradiso     2 documentos citables en data/demo/gold, con su fuente
 Le Muse      6 anuncios: 4 creativos únicos y 2 repetidos
+L'Eco        la marca aparece en 2 de 4 preguntas (50 %); share of voice 25 %
+             1 cita propia; 2 brechas, y el Paradiso ya responde 1
 ```
 
 Después es tu turno: pon tu correo, elige páginas reales que den permiso y corre

@@ -2,7 +2,8 @@
 
 Levanta en esta maquina una ciudad de prueba (127.0.0.1) con una puerta, una pagina con
 datos personales, una pagina prohibida y una que niega el paso. Recorre los circulos con
-el mismo codigo del viaje real y lee unos anuncios de muestra. Nada sale a la red.
+el mismo codigo del viaje real, lee unos anuncios de muestra y escucha lo que unos
+motores de respuesta de muestra dicen de la marca. Nada sale a la red.
 """
 
 from __future__ import annotations
@@ -18,6 +19,15 @@ from typing import Any
 from paquete_plantilla import config
 from paquete_plantilla.anuncios import cargar_anuncios, reporte_markdown, resumen
 from paquete_plantilla.config import Seed
+from paquete_plantilla.eco import (
+    Pregunta,
+    Respuesta,
+    escuchar,
+    leer_corpus,
+    respuestas_de_marca,
+    validar_domande,
+)
+from paquete_plantilla.eco import reporte_markdown as reporte_eco
 from paquete_plantilla.fetching import PoliteFetcher
 from paquete_plantilla.pipeline import CaptureReport, capture
 
@@ -125,6 +135,128 @@ ANUNCIOS_MUESTRA: list[dict[str, Any]] = [
 ]
 
 
+MARCA_DEMO = "Citta di prova"
+DOMINIO_DEMO = "citta-di-prova.example"
+RIVALES_DEMO = ("Rival Uno", "Rival Dos")
+ECO_PREGUNTAS = (
+    Pregunta(
+        id="c1",
+        set="conversacional",
+        etapa="decision",
+        producto="domicilios",
+        persona="familia de cuatro",
+        situacion="comprar a domicilio",
+        restricciones="presupuesto medio, tres ciudades",
+        prompt="Que empresa en tres ciudades vende a domicilio productos de temporada "
+        "para una familia de cuatro con presupuesto medio?",
+        insumo="ventas",
+        resultado_negocio="pedidos a domicilio",
+    ),
+    Pregunta(
+        id="c2",
+        set="conversacional",
+        etapa="comparacion",
+        producto="tiendas",
+        persona="cliente que ya compra a un rival",
+        situacion="cambiar de proveedor",
+        restricciones="atencion rapida",
+        prompt="Que alternativas hay a Rival Uno para comprar productos de temporada "
+        "con atencion al cliente rapida?",
+        insumo="soporte",
+        resultado_negocio="clientes nuevos",
+    ),
+    Pregunta(
+        id="c3",
+        set="conversacional",
+        etapa="descubrimiento",
+        producto="marca",
+        persona="persona que se muda a la ciudad",
+        situacion="buscar una empresa confiable",
+        restricciones="trayectoria larga, varias ciudades",
+        prompt="Que empresas con decadas de trayectoria tienen tiendas en varias ciudades "
+        "y buena atencion al cliente?",
+        insumo="foros",
+        resultado_negocio="reconocimiento de marca",
+    ),
+    Pregunta(
+        id="c4",
+        set="conversacional",
+        etapa="decision",
+        producto="pedidos para oficinas",
+        persona="oficina pequena",
+        situacion="pedido urgente",
+        restricciones="envio el mismo dia, pedido minimo bajo",
+        prompt="Donde comprar con envio el mismo dia para una oficina pequena con pedido "
+        "minimo bajo?",
+        insumo="ventas",
+        resultado_negocio="pedidos corporativos",
+    ),
+    Pregunta(
+        id="m1",
+        set="marca",
+        etapa="descubrimiento",
+        producto="marca",
+        persona="",
+        situacion="",
+        restricciones="",
+        prompt="Que es Citta di prova y donde tiene tiendas?",
+        insumo="brief",
+        resultado_negocio="narrativa de marca",
+    ),
+    Pregunta(
+        id="m2",
+        set="marca",
+        etapa="decision",
+        producto="servicio",
+        persona="",
+        situacion="",
+        restricciones="",
+        prompt="Citta di prova tiene buena atencion al cliente?",
+        insumo="brief",
+        resultado_negocio="narrativa de marca",
+    ),
+)
+ECO_RESPUESTAS = (
+    Respuesta(
+        "c1",
+        "motor-a",
+        "2026-10-22",
+        "Citta di prova vende a domicilio en tres ciudades; Rival Uno tambien es una opcion.",
+        ("https://citta-di-prova.example/",),
+    ),
+    Respuesta("c1", "motor-b", "2026-10-22", "Prueba Rival Uno.", ("https://rival-uno.example/",)),
+    Respuesta(
+        "c2",
+        "motor-a",
+        "2026-10-22",
+        "Rival Dos y Citta di prova responden rapido.",
+        ("https://blog.example/comparativa",),
+    ),
+    Respuesta(
+        "c3",
+        "motor-a",
+        "2026-10-22",
+        "Rival Uno y Rival Dos tienen tiendas en varias ciudades.",
+        ("https://directorio.example/tiendas",),
+    ),
+    Respuesta(
+        "c4",
+        "motor-a",
+        "2026-10-22",
+        "Rival Dos envia el mismo dia.",
+        ("https://rival-dos.example/",),
+    ),
+    Respuesta(
+        "m1",
+        "motor-a",
+        "2026-10-22",
+        "Citta di prova es una empresa con tiendas, productos y atencion al cliente.",
+        (),
+    ),
+    Respuesta("m2", "motor-b", "2026-10-22", "No tengo informacion suficiente sobre ella.", ()),
+)
+
+
 @dataclass(frozen=True, slots=True)
 class ResultadoDemo:
     """Lo que vio el viaje de prueba, con cifras contadas por el codigo."""
@@ -132,6 +264,8 @@ class ResultadoDemo:
     viaje: CaptureReport
     muse: dict[str, Any]
     reporte_muse: Path
+    eco: dict[str, Any]
+    reporte_eco: Path
     destino: Path
 
 
@@ -193,7 +327,25 @@ def recorrer(destino: Path = DEMO_DIR, paso: float = PASO_DEMO) -> ResultadoDemo
     reporte = reporte_markdown(
         anuncios, "demo", salida=destino / "gold" / "inteligencia-anuncios-demo.md"
     )
-    return ResultadoDemo(viaje=viaje, muse=resumen(anuncios), reporte_muse=reporte, destino=destino)
+    corpus = leer_corpus(destino / "gold" / "corpus.jsonl")
+    escucha = escuchar(
+        ECO_PREGUNTAS, ECO_RESPUESTAS, MARCA_DEMO, DOMINIO_DEMO, RIVALES_DEMO, corpus
+    )
+    ruta_eco = reporte_eco(
+        MARCA_DEMO,
+        escucha,
+        validar_domande(ECO_PREGUNTAS, MARCA_DEMO, minimo=4),
+        respuestas_de_marca(ECO_PREGUNTAS, ECO_RESPUESTAS),
+        salida=destino / "gold" / "eco-demo.md",
+    )
+    return ResultadoDemo(
+        viaje=viaje,
+        muse=resumen(anuncios),
+        reporte_muse=reporte,
+        eco=escucha,
+        reporte_eco=ruta_eco,
+        destino=destino,
+    )
 
 
 def narrar(
@@ -221,6 +373,11 @@ def narrar(
     unicos = _n(muse["unicos"], "creativo único", "creativos únicos")
     repetidos = _n(muse["repetidos"], "repetido", "repetidos")
     real = config.REQUEST_DELAY_SECONDS
+    eco = resultado.eco
+    aparece = f"{eco['visibles']} de {eco['con_respuesta']} preguntas ({eco['visibilidad']:g} %)"
+    citas = _n(eco["citas_propias"], "cita propia", "citas propias")
+    brechas = _n(len(eco["brechas"]), "brecha", "brechas")
+    responde = eco["cubiertas"]
 
     lineas = [
         "",
@@ -237,6 +394,10 @@ def narrar(
         "",
         f"Le Muse      {anuncios}: {unicos} y {repetidos}",
         f"             lectura en {_relativa(resultado.reporte_muse)}",
+        "",
+        f"L'Eco        la marca aparece en {aparece}; share of voice {eco['share_of_voice']:g} %",
+        f"             {citas}; {brechas}, y el Paradiso ya responde {responde}",
+        f"             escucha en {_relativa(resultado.reporte_eco)}",
         "",
         "Il Giudizio  tu turno:",
         "  1. Pon tu correo en CONTACTO (config.py).",

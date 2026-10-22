@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup, NavigableString, Tag
+from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 from pypdf import PdfReader
 
 from paquete_plantilla.config import (
@@ -41,6 +41,25 @@ CHROME_TAGS = frozenset(
         "template",
     }
 )
+# Controles de interfaz que no son contenido: botones, carruseles y "leer mas".
+UI_CLASS_HINTS = (
+    "button",
+    "btn",
+    "slick-",
+    "swiper-pagination",
+    "swiper-button",
+    "owl-dots",
+    "owl-nav",
+    "carousel-control",
+    "carousel-indicators",
+    "screen-reader",
+    "skip-link",
+    "read-more",
+    "readmore",
+    "more-link",
+    "pagination",
+)
+UI_ROLES = frozenset({"button", "navigation", "tablist", "tab", "menu", "menubar"})
 BLOCK_CONTAINERS = frozenset(
     {"div", "section", "article", "main", "figure", "figcaption", "dl", "dt", "dd"}
 )
@@ -107,6 +126,11 @@ def extract_html(html: str | bytes, url: str, fallback_title: str = "") -> Extra
     title = _extract_title(soup, fallback_title)
 
     for node in list(soup.find_all(CHROME_TAGS)):
+        if not node.decomposed:
+            node.decompose()
+    for comment in list(soup.find_all(string=lambda text: isinstance(text, Comment))):
+        comment.extract()
+    for node in list(soup.find_all(_is_ui_control)):
         if not node.decomposed:
             node.decompose()
 
@@ -264,6 +288,15 @@ def _content_root(soup: BeautifulSoup) -> Tag:
     return soup
 
 
+def _is_ui_control(tag: Tag) -> bool:
+    if not isinstance(tag, Tag) or tag.attrs is None:
+        return False
+    if str(tag.get("role", "")).lower() in UI_ROLES:
+        return True
+    classes = tag.get("class") or []
+    return any(hint in str(token).lower() for token in classes for hint in UI_CLASS_HINTS)
+
+
 def _is_hidden(tag: Tag) -> bool:
     if tag.has_attr("hidden"):
         return True
@@ -418,14 +451,23 @@ def _clean_inline(text: str) -> str:
 
 def _normalize_blocks(blocks: list[str]) -> str:
     cleaned: list[str] = []
+    seen: set[str] = set()
     for block in blocks:
         text = block.strip()
         if not text:
             continue
-        if cleaned and cleaned[-1] == text:
+        # Un mismo texto repetido en la pagina (titulo animado, carrusel) se guarda una vez.
+        key = _block_key(text)
+        if key in seen:
             continue
+        seen.add(key)
         cleaned.append(text)
     return "\n\n".join(cleaned)
+
+
+def _block_key(text: str) -> str:
+    plain = re.sub(r"[#*_>`\[\]()]|https?://\S+", " ", text)
+    return re.sub(r"\s+", " ", plain).strip().lower()
 
 
 def _normalize_pdf_text(text: str) -> str:

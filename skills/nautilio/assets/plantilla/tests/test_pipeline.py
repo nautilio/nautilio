@@ -11,6 +11,9 @@ from paquete_plantilla.config import Seed
 from paquete_plantilla.fetching import FetchResult, PoliteFetcher
 from paquete_plantilla.pipeline import capture, collect_status
 
+DOMINIO = "{{DOMINIO}}"
+BASE = f"https://{DOMINIO}"
+
 HTML = """
 <html><head><title>Quienes somos</title></head>
 <body><main>
@@ -45,8 +48,8 @@ def _fixed_now() -> datetime:
 
 def test_captura_escribe_las_tres_capas_el_corpus_y_el_inventario(tmp_path: Path) -> None:
     # Arrange
-    ok_seed = _seed("quienes-somos", "https://{{DOMINIO}}/quienes-somos")
-    missing_seed = _seed("blog", "https://{{DOMINIO}}/blog")
+    ok_seed = _seed("quienes-somos", f"{BASE}/quienes-somos")
+    missing_seed = _seed("blog", f"{BASE}/blog")
     results = {
         "quienes-somos": FetchResult(
             seed=ok_seed,
@@ -89,7 +92,7 @@ def test_captura_escribe_las_tres_capas_el_corpus_y_el_inventario(tmp_path: Path
     bronze = tmp_path / "raw" / "quienes-somos.html"
     assert bronze.is_file()
     silver = (tmp_path / "processed" / "quienes-somos.md").read_text(encoding="utf-8")
-    assert "ventas@{{DOMINIO}}" in silver
+    assert f"ventas@{DOMINIO}" in silver
     assert "persona@gmail.com" not in silver
     assert "313 424 5231" not in silver
     assert "[correo enmascarado]" in silver
@@ -97,7 +100,7 @@ def test_captura_escribe_las_tres_capas_el_corpus_y_el_inventario(tmp_path: Path
 
     gold = (tmp_path / "gold" / "quienes-somos.md").read_text(encoding="utf-8")
     assert gold.startswith("---\n")
-    assert 'url_cita: "https://{{DOMINIO}}/quienes-somos"' in gold
+    assert f'url_cita: "{BASE}/quienes-somos"' in gold
     assert 'confianza: "no_confiable"' in gold
     assert "posible_inyeccion: false" in gold
 
@@ -126,7 +129,7 @@ def test_captura_escribe_las_tres_capas_el_corpus_y_el_inventario(tmp_path: Path
 
 def test_marca_requiere_js_en_el_manifiesto(tmp_path: Path) -> None:
     # Arrange
-    seed = _seed("panel", "https://{{DOMINIO}}/panel")
+    seed = _seed("panel", f"{BASE}/panel")
     shell = '<html><body><div id="root"></div><script src="/app.js"></script></body></html>'
     results = {
         "panel": FetchResult(
@@ -165,7 +168,7 @@ def test_marca_requiere_js_en_el_manifiesto(tmp_path: Path) -> None:
 
 def test_status_cuenta_los_archivos_de_cada_capa(tmp_path: Path) -> None:
     # Arrange
-    seed = _seed("quienes-somos", "https://{{DOMINIO}}/quienes-somos")
+    seed = _seed("quienes-somos", f"{BASE}/quienes-somos")
     results = {
         "quienes-somos": FetchResult(
             seed=seed,

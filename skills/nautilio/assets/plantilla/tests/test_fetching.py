@@ -7,6 +7,9 @@ from typing import Any
 from paquete_plantilla.config import Seed
 from paquete_plantilla.fetching import PoliteFetcher, opciones_sesion
 
+DOMINIO = "{{DOMINIO}}"
+BASE = f"https://{DOMINIO}"
+
 ROBOTS_ALLOW = "User-agent: *\nDisallow:\n"
 ROBOTS_BLOCK = "User-agent: *\nDisallow: /privado\n"
 
@@ -49,10 +52,10 @@ def _seed(url: str) -> Seed:
 
 def test_permite_la_descarga_cuando_robots_la_autoriza() -> None:
     # Arrange
-    url = "https://{{DOMINIO}}/quienes-somos"
+    url = f"{BASE}/quienes-somos"
     session = FakeSession(
         {
-            "https://{{DOMINIO}}/robots.txt": FakeResponse(body=ROBOTS_ALLOW.encode()),
+            f"{BASE}/robots.txt": FakeResponse(body=ROBOTS_ALLOW.encode()),
             url: FakeResponse(body=b"<html>ok</html>", headers={"Content-Type": "text/html"}),
         }
     )
@@ -65,14 +68,16 @@ def test_permite_la_descarga_cuando_robots_la_autoriza() -> None:
     assert result.status == "ok"
     assert result.content_kind == "html"
     assert result.robots_allowed is True
-    assert session.calls == ["https://{{DOMINIO}}/robots.txt", url]
+    assert session.calls == [f"{BASE}/robots.txt", url]
 
 
 def test_bloquea_la_descarga_cuando_robots_lo_prohibe() -> None:
     # Arrange
-    url = "https://{{DOMINIO}}/privado/interno"
+    url = f"{BASE}/privado/interno"
     session = FakeSession(
-        {"https://{{DOMINIO}}/robots.txt": FakeResponse(body=ROBOTS_BLOCK.encode())}
+        {
+            f"{BASE}/robots.txt": FakeResponse(body=ROBOTS_BLOCK.encode()),
+        },
     )
     fetcher = PoliteFetcher(session=session, delay_seconds=0, sleep=lambda _: None)
 
@@ -82,11 +87,11 @@ def test_bloquea_la_descarga_cuando_robots_lo_prohibe() -> None:
     # Assert
     assert result.status == "robots_blocked"
     assert result.robots_allowed is False
-    assert session.calls == ["https://{{DOMINIO}}/robots.txt"]
+    assert session.calls == [f"{BASE}/robots.txt"]
 
 
-class ScraplingLikeResponse(FakeResponse):
-    """Como en Scrapling: `.text` es el texto visible del DOM y llega vacio en un robots.txt."""
+class RespuestaDelClienteHTTP(FakeResponse):
+    """Como el cliente real: `.text` es el texto visible y llega vacio en un robots.txt."""
 
     @property
     def text(self) -> str:
@@ -94,11 +99,15 @@ class ScraplingLikeResponse(FakeResponse):
         return ""
 
 
-def test_bloquea_con_robots_aunque_text_llegue_vacio_como_en_scrapling() -> None:
+def test_bloquea_con_robots_aunque_text_llegue_vacio_como_en_el_cliente_real() -> None:
     # Arrange
-    url = "https://{{DOMINIO}}/privado/interno"
+    url = f"{BASE}/privado/interno"
     session = FakeSession(
-        {"https://{{DOMINIO}}/robots.txt": ScraplingLikeResponse(body=ROBOTS_BLOCK.encode())}
+        {
+            f"{BASE}/robots.txt": RespuestaDelClienteHTTP(
+                body=ROBOTS_BLOCK.encode(),
+            ),
+        }
     )
     fetcher = PoliteFetcher(session=session, delay_seconds=0, sleep=lambda _: None)
 
@@ -107,15 +116,36 @@ def test_bloquea_con_robots_aunque_text_llegue_vacio_como_en_scrapling() -> None
 
     # Assert
     assert result.status == "robots_blocked"
-    assert session.calls == ["https://{{DOMINIO}}/robots.txt"]
+    assert session.calls == [f"{BASE}/robots.txt"]
+
+
+def test_lee_content_type_sin_distinguir_mayusculas() -> None:
+    # Arrange: el cliente HTTP real entrega las cabeceras en minuscula.
+    url = f"{BASE}/quienes-somos"
+    session = FakeSession(
+        {
+            f"{BASE}/robots.txt": FakeResponse(body=ROBOTS_ALLOW.encode()),
+            url: FakeResponse(
+                body=b"<html>ok</html>", headers={"content-type": "text/html; charset=utf-8"}
+            ),
+        }
+    )
+    fetcher = PoliteFetcher(session=session, delay_seconds=0, sleep=lambda _: None)
+
+    # Act
+    result = fetcher.fetch(_seed(url))
+
+    # Assert
+    assert result.content_type == "text/html; charset=utf-8"
+    assert result.content_kind == "html"
 
 
 def test_para_el_lote_ante_403_o_429() -> None:
     # Arrange
-    url = "https://{{DOMINIO}}/blog"
+    url = f"{BASE}/blog"
     session = FakeSession(
         {
-            "https://{{DOMINIO}}/robots.txt": FakeResponse(body=ROBOTS_ALLOW.encode()),
+            f"{BASE}/robots.txt": FakeResponse(body=ROBOTS_ALLOW.encode()),
             url: FakeResponse(status=429),
         }
     )
@@ -123,23 +153,23 @@ def test_para_el_lote_ante_403_o_429() -> None:
 
     # Act
     first = fetcher.fetch(_seed(url))
-    second = fetcher.fetch(_seed("https://{{DOMINIO}}/sostenibilidad"))
+    second = fetcher.fetch(_seed(f"{BASE}/sostenibilidad"))
 
     # Assert
     assert first.status == "stopped"
     assert first.http_status == 429
     assert fetcher.stopped is True
     assert second.status == "not_attempted"
-    assert session.calls == ["https://{{DOMINIO}}/robots.txt", url]
+    assert session.calls == [f"{BASE}/robots.txt", url]
 
 
 def test_registra_url_inexistente_y_continua() -> None:
     # Arrange
-    missing = "https://{{DOMINIO}}/no-existe"
-    working = "https://{{DOMINIO}}/quienes-somos"
+    missing = f"{BASE}/no-existe"
+    working = f"{BASE}/quienes-somos"
     session = FakeSession(
         {
-            "https://{{DOMINIO}}/robots.txt": FakeResponse(body=ROBOTS_ALLOW.encode()),
+            f"{BASE}/robots.txt": FakeResponse(body=ROBOTS_ALLOW.encode()),
             missing: FakeResponse(status=404),
             working: FakeResponse(body=b"<html>ok</html>", headers={"Content-Type": "text/html"}),
         }
@@ -158,10 +188,10 @@ def test_registra_url_inexistente_y_continua() -> None:
 
 def test_respeta_el_intervalo_minimo_entre_solicitudes() -> None:
     # Arrange
-    url = "https://{{DOMINIO}}/quienes-somos"
+    url = f"{BASE}/quienes-somos"
     session = FakeSession(
         {
-            "https://{{DOMINIO}}/robots.txt": FakeResponse(body=ROBOTS_ALLOW.encode()),
+            f"{BASE}/robots.txt": FakeResponse(body=ROBOTS_ALLOW.encode()),
             url: FakeResponse(body=b"<html>ok</html>", headers={"Content-Type": "text/html"}),
         }
     )

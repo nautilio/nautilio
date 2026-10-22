@@ -1,6 +1,6 @@
 ---
 name: nautilio
-description: "Nautilio guía dos viajes. Il Viaggio cruza La Porta (robots.txt y términos de uso), avanza con Il Passo, se detiene ante Caronte y lleva un conjunto acotado de páginas públicas por Inferno, Purgatorio y Paradiso: los datos personales se pierden en el Lete y queda un corpus citable con manifiesto, corpus.jsonl y Registro del Lete; las páginas que solo cargan con JavaScript esperan en el Limbo una revisión humana. Le Muse estudia los anuncios públicos de una marca en las bibliotecas públicas de anuncios de las plataformas, con reporte determinista y el lema «Inspírate, no copies». Úsala para preparar un corpus citable para RAG, auditar el enmascarado de datos personales, analizar la pauta pública de una competencia o buscar inspiración sin copiar. No sirve para crawling masivo, redes sociales, áreas autenticadas, datos de menores ni descargas automáticas de video."
+description: "Nautilio guía tres viajes sobre los datos públicos de cualquier empresa. Il Viaggio cruza La Porta (robots.txt y términos), avanza con Il Passo, se detiene ante Caronte y lleva pocas páginas públicas por Inferno, Purgatorio y Paradiso: el Lete borra los datos personales y queda un corpus citable. Le Muse lee los anuncios públicos de una marca para inspirarse sin copiar. L'Eco mide lo que los motores de respuesta dicen de la marca: brief, matriz de preguntas, visibilidad, share of voice, citas y brechas frente al Paradiso. Úsala para preparar un corpus citable para RAG, auditar el enmascarado, analizar la pauta pública de una competencia o mejorar la visibilidad de una marca en asistentes de IA. No sirve para crawling masivo, redes sociales, áreas autenticadas, datos de menores ni para automatizar consultas a los motores."
 license: MIT
 allowed-tools: Read Write Edit Glob Grep WebFetch Bash(python:*) Bash(uv:*) Bash(make:*) Bash(git init:*) Bash(git status:*)
 compatibility: "Requiere Python 3 (el script de montaje usa solo la biblioteca estándar). El proyecto generado usa uv y Python 3.13, y funciona en macOS, Linux y Windows. El transcriptor local es opcional (extra audio)."
@@ -9,17 +9,19 @@ metadata:
   version: "2.1"
 ---
 
-# Nautilio — un viaje por tres reinos
+# Nautilio — tres viajes por los datos públicos
 
 > «Per me si va ne la città dei dati.»
 
-Nautilio guía dos viajes sobre un mismo proyecto reproducible:
+Nautilio guía tres viajes sobre un mismo proyecto reproducible:
 
 1. **Il Viaggio** lleva un conjunto **acotado** de páginas públicas desde el Inferno hasta el
    Paradiso. Al final queda un corpus citable y los datos personales se pierden en el Lete.
    Regla de oro: **primero La Porta, después la petición**.
 2. **Le Muse** estudia los anuncios públicos de una marca o competencia para entender qué
    prueba y por qué. Lema: **«Inspírate, no copies»**.
+3. **L'Eco** escucha lo que los motores de respuesta dicen de la marca: si la recomiendan,
+   si la usan como fuente y dónde la dejan por fuera. Cada brecha se cruza con el Paradiso.
 
 ## Mapa del viaje
 
@@ -39,6 +41,11 @@ documento usa el nombre.
 | **Limbo** | Páginas que solo cargan con JavaScript y esperan revisión humana | `requiere_js` en el manifiesto |
 | **Il Giudizio** | Verificación completa antes de publicar | `make check` |
 | **Le Muse** | Análisis de anuncios públicos | `make anuncios MARCA=<marca>` |
+| **L'Eco** | Lo que los motores de respuesta dicen de la marca | `make eco MARCA=<marca> COMPETIDORES="a,b"` |
+| **Il Ritratto** | El brief: contexto, foco y narrativa | `data/eco/ritratto.csv` |
+| **Le Domande** | La matriz de preguntas | `data/eco/domande.csv` |
+| **L'Ascolto** | Respuestas recogidas en los motores | `data/raw/eco/<marca>.jsonl` |
+| **La Risposta** | Brechas cruzadas con el Paradiso | `data/gold/eco-<marca>.md` |
 
 ## Invocación
 
@@ -52,6 +59,8 @@ Marca competidora: <marca o página pública cuyos anuncios estudiará Le Muse>
 Destino:           <carpeta del proyecto nuevo>
 Paquete:           <opcional; por defecto, slug snake_case de la empresa>
 Contacto:          <correo real de quien captura, nunca uno de la empresa>
+Competidores:      <marcas contra las que la comparan, separadas por comas>
+Productos:         <productos o categorías prioritarios para L'Eco>
 Alcance:           <qué entra y qué queda fuera>
 ```
 
@@ -229,6 +238,52 @@ Si el extra falta, el comando explica cómo instalarlo.
 De lo leído se extrae un mecanismo, no una pieza. La idea propia se escribe para la marca y
 el público de quien la usa, se marca como hipótesis y se mide con datos propios.
 
+## L'Eco
+
+Lo que los motores de respuesta repiten de la marca. Una **mención** es cuando el motor la
+recomienda; una **cita**, cuando usa una página de la marca como fuente. Detalle del método en
+[`references/l-eco.md`](references/l-eco.md).
+
+### Il Ritratto
+
+```bash
+make eco MARCA="<marca>"
+```
+
+La primera vez crea `data/eco/ritratto.csv` (el brief) y `data/eco/domande.csv` (la matriz
+vacía). Llena el brief con lo que el Paradiso sostiene y **cita la `url_cita`** de cada dato. Lo
+que el Paradiso no responde queda «por confirmar con <rol>». Nunca inventes un dato de negocio.
+
+### Le Domande
+
+Escribe en `domande.csv` entre 20 y 40 preguntas conversacionales que **no nombran la marca**,
+más un set de marca que sí la nombra.
+
+- Fórmula: situación + persona + restricciones.
+- Orden: primero las de decisión, luego comparación y al final descubrimiento.
+- Cada pregunta se conecta con un resultado de negocio; si no, se descarta.
+
+`make eco` revisa estas reglas y lista lo que falte.
+
+### L'Ascolto
+
+La persona hace cada pregunta en los motores y guarda las respuestas en
+`data/raw/eco/<marca>.jsonl` (`prompt_id`, `motor`, `fecha`, `respuesta`, `fuentes`). Un agente
+solo puede hacerlo con una API autorizada. **No automatices el acceso a un motor ni inventes
+respuestas.**
+
+### La Risposta
+
+```bash
+make eco MARCA="<marca>" COMPETIDORES="rival uno,rival dos"
+```
+
+El código calcula visibilidad, share of voice, posición promedio, citas propias y sitios
+citados, y lista las brechas. Para cada brecha dice si el Paradiso ya tiene una página
+relacionada o si falta contenido. El reporte queda en `data/gold/eco-<marca>.md`. Muestra sus
+cifras tal cual y propone qué página reforzar o escribir, con pruebas públicas y sin los claims
+a evitar del Ritratto.
+
 ## Reglas no negociables
 
 1. **La Porta primero.** `robots.txt` y términos de uso antes de capturar; ante la duda, no
@@ -246,6 +301,8 @@ el público de quien la usa, se marca como hipótesis y se mide con datos propio
 11. **Menores fuera del viaje.** Sus datos se descartan; no se enmascaran.
 12. **Le Muse solo con datos públicos**, sin descargas automáticas que violen términos.
 13. **Inspírate, no copies.** No se reutiliza texto, guion, voz, imagen ni visual ajeno.
+14. **L'Eco escucha, no automatiza.** Las respuestas las recoge una persona o una API
+    autorizada; nunca se inventan ni se sacan con un robot.
 
 ## Lista de Il Giudizio
 
@@ -264,6 +321,9 @@ el público de quien la usa, se marca como hipótesis y se mide con datos propio
 - [ ] `corpus.jsonl` y Registro del Lete generados.
 - [ ] Páginas del Limbo revisadas a mano.
 - [ ] Le Muse con datos públicos y reporte sin cifras inventadas.
+- [ ] Il Ritratto con la fuente de cada dato o «por confirmar».
+- [ ] Le Domande sin avisos de `make eco` y cada pregunta con resultado de negocio.
+- [ ] L'Ascolto con respuestas reales y el reporte de L'Eco generado por el código.
 - [ ] `make check` en verde.
 - [ ] Repositorio privado y sin copias completas del sitio.
 
@@ -275,3 +335,4 @@ el público de quien la usa, se marca como hipótesis y se mide con datos propio
 | [`references/enmascarado.md`](references/enmascarado.md) | El Lete: qué borra, qué sobrevive y la lección de los celulares de tienda. |
 | [`references/tre-regni.md`](references/tre-regni.md) | Inferno, Purgatorio y Paradiso: qué guarda cada reino y qué se versiona. |
 | [`references/le-muse.md`](references/le-muse.md) | Raccolta, Conteggio, Lettura e Ispirazione: JSONL, prompt de análisis y reglas. |
+| [`references/l-eco.md`](references/l-eco.md) | Il Ritratto, Le Domande, L'Ascolto y La Risposta: menciones, citas y brechas. |

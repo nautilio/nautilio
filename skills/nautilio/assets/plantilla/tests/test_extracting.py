@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from paquete_plantilla.extracting import detect_requires_js, extract_html, mask_personal_data
 
+DOMINIO = "{{DOMINIO}}"
+BASE = f"https://{DOMINIO}"
+
 SAMPLE_HTML = """
 <!doctype html>
 <html lang="es">
@@ -43,7 +46,7 @@ def test_extrae_solo_el_cuerpo_editorial() -> None:
     html = SAMPLE_HTML
 
     # Act
-    document = extract_html(html, "https://{{DOMINIO}}/quienes-somos")
+    document = extract_html(html, f"{BASE}/quienes-somos")
 
     # Assert
     assert "Quienes somos" in document.markdown
@@ -61,13 +64,13 @@ def test_conserva_estructura_y_resuelve_enlaces_relativos() -> None:
     html = SAMPLE_HTML
 
     # Act
-    markdown = extract_html(html, "https://{{DOMINIO}}/quienes-somos").markdown
+    markdown = extract_html(html, f"{BASE}/quienes-somos").markdown
 
     # Assert
     assert "# Quienes somos" in markdown
     assert "- Primer punto" in markdown
     assert "| Producto | Marca |" in markdown
-    assert "[pagina de contacto](https://{{DOMINIO}}/contacto)" in markdown
+    assert f"[pagina de contacto]({BASE}/contacto)" in markdown
 
 
 def test_marca_posible_inyeccion_en_texto_visible() -> None:
@@ -75,7 +78,7 @@ def test_marca_posible_inyeccion_en_texto_visible() -> None:
     html = SAMPLE_HTML
 
     # Act
-    document = extract_html(html, "https://{{DOMINIO}}/quienes-somos")
+    document = extract_html(html, f"{BASE}/quienes-somos")
 
     # Assert
     assert document.posible_inyeccion is True
@@ -102,14 +105,14 @@ def test_enmascara_correos_personales_celulares_e_identificaciones() -> None:
 
 def test_conserva_el_correo_del_dominio_institucional() -> None:
     # Arrange
-    text = "Contacto: ventas@{{DOMINIO}} y prensa@{{DOMINIO}}; persona@gmail.com."
+    text = f"Contacto: ventas@{DOMINIO} y prensa@{DOMINIO}; persona@gmail.com."
 
     # Act
     masked = mask_personal_data(text)
 
     # Assert
-    assert "ventas@{{DOMINIO}}" in masked
-    assert "prensa@{{DOMINIO}}" in masked
+    assert f"ventas@{DOMINIO}" in masked
+    assert f"prensa@{DOMINIO}" in masked
     assert "persona@gmail.com" not in masked
     assert masked.count("[correo enmascarado]") == 1
 
@@ -154,7 +157,7 @@ def test_conserva_los_telefonos_fijos_60x() -> None:
 
 def test_las_excepciones_se_pueden_desactivar() -> None:
     # Arrange
-    text = "Correo: ventas@{{DOMINIO}}. Telefono: 601 234 5678."
+    text = f"Correo: ventas@{DOMINIO}. Telefono: 601 234 5678."
 
     # Act
     masked = mask_personal_data(
@@ -164,7 +167,7 @@ def test_las_excepciones_se_pueden_desactivar() -> None:
     )
 
     # Assert
-    assert "ventas@{{DOMINIO}}" not in masked
+    assert f"ventas@{DOMINIO}" not in masked
     assert "601 234 5678" not in masked
     assert "[correo enmascarado]" in masked
     assert "[telefono enmascarado]" in masked
@@ -184,7 +187,7 @@ def test_no_confunde_cifras_financieras_con_telefonos() -> None:
 def test_detecta_una_pagina_que_solo_carga_con_javascript() -> None:
     # Arrange
     html = '<html><body><div id="root"></div><script src="/app.js"></script></body></html>'
-    markdown = extract_html(html, "https://{{DOMINIO}}/panel").markdown
+    markdown = extract_html(html, f"{BASE}/panel").markdown
 
     # Act
     requiere_js = detect_requires_js(html, markdown)
@@ -195,10 +198,63 @@ def test_detecta_una_pagina_que_solo_carga_con_javascript() -> None:
 
 def test_no_marca_una_pagina_estatica_aunque_tenga_scripts() -> None:
     # Arrange
-    markdown = extract_html(SAMPLE_HTML, "https://{{DOMINIO}}/quienes-somos").markdown
+    markdown = extract_html(SAMPLE_HTML, f"{BASE}/quienes-somos").markdown
 
     # Act
     requiere_js = detect_requires_js(SAMPLE_HTML, markdown)
 
     # Assert
     assert requiere_js is False
+
+
+UI_HTML = """
+<html><body><main>
+  <!-- Main Slides -->
+  <h1>Quienes somos</h1>
+  <p>Fundados en 1978. Mas en <a href="/historia">nuestra historia</a>.</p>
+  <div class="elementor-widget-button">
+    <a class="elementor-button elementor-button-link" href="/visita">Agendar visita</a>
+  </div>
+  <a class="read-more" href="/blog/1">Ver mas</a>
+  <div class="swiper-pagination"><span>1</span><span>2</span></div>
+  <span class="screen-reader-text">Saltar al contenido</span>
+  <div role="tablist"><span>Pestana</span></div>
+  <!-- Dots -->
+</main></body></html>
+"""
+
+
+def test_descarta_comentarios_y_controles_de_interfaz() -> None:
+    # Act
+    markdown = extract_html(UI_HTML, f"{BASE}/quienes-somos").markdown
+
+    # Assert
+    for ruido in ("Main Slides", "Dots", "Agendar visita", "Ver mas", "Saltar al contenido"):
+        assert ruido not in markdown
+    assert "Pestana" not in markdown
+
+
+def test_conserva_los_enlaces_dentro_de_un_parrafo() -> None:
+    # Act
+    markdown = extract_html(UI_HTML, f"{BASE}/quienes-somos").markdown
+
+    # Assert
+    assert "Fundados en 1978." in markdown
+    assert f"[nuestra historia]({BASE}/historia)" in markdown
+
+
+def test_guarda_una_sola_vez_un_texto_repetido_en_la_pagina() -> None:
+    # Arrange
+    html = (
+        "<html><body><main>"
+        "<h1>Conoce la empresa</h1>"
+        "<p>Educamos con proposito y sin limites.</p>"
+        "<p>Educamos con proposito y sin limites.</p>"
+        "</main></body></html>"
+    )
+
+    # Act
+    markdown = extract_html(html, f"{BASE}/").markdown
+
+    # Assert
+    assert markdown.count("Educamos con proposito y sin limites.") == 1
