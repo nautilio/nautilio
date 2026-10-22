@@ -39,7 +39,7 @@ Nautilio tiene tres brazos.
   competencia, y dice si el Paradiso ya tiene la página que responde.
 
 <p align="center">
-    <img alt="El mapa del viaje: Il Viaggio y Le Muse" src="docs/assets/flujo.svg">
+    <img alt="El mapa del viaje: Il Viaggio, Le Muse y L'Eco" src="docs/assets/flujo.svg">
 </p>
 
 ## El mapa

@@ -59,7 +59,7 @@ def flujo() -> str:
     ancho, alto = 1200, 634
     caja, paso, x0 = 172, 192, 36
     partes = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{ancho}" height="{alto}" viewBox="0 0 {ancho} {alto}" role="img" aria-label="Mapa del viaje de Nautilio: Il Viaggio y Le Muse">',
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{ancho}" height="{alto}" viewBox="0 0 {ancho} {alto}" role="img" aria-label="Mapa del viaje de Nautilio: Il Viaggio, Le Muse y L’Eco">',
         "<defs>"
         f'<pattern id="tramado" width="2.6" height="2.6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="2.6" height="2.6" fill="{PAPEL}"/><path d="M0 0V2.6M0 0H2.6" stroke="{TINTA}" stroke-width=".9" opacity=".85"/></pattern>'
         '<filter id="grano" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7"/>'
