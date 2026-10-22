@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+*.egg-info/
+.venv/
+.uv/
+
+# Pruebas y lint
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Entorno y secretos (NUNCA versionar)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Il Viaggio: el crudo del Inferno y el Purgatorio no se versionan.
+# El manifiesto si: es la evidencia reproducible de la captura.
+data/raw/*
+!data/raw/manifest.json
+data/processed/
+data/demo/
+
+# Sistema operativo / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

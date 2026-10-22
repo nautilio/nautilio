@@ -1,0 +1,27 @@
+# Temporales de trabajo
+.tmp/
+
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+*.egg-info/
+.venv/
+.uv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Sistema operativo / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Material de consulta local (no forma parte del repositorio público)
+docs/referencias/
+
+# Registro local de skills
+.atl/

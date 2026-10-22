@@ -1,0 +1,48 @@
+[project]
+name = "paquete_plantilla"
+version = "0.1.0"
+description = "Pipeline etico de captura y corpus para {{EMPRESA}}."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.13"
+authors = [{ name = "Equipo de datos" }]
+dependencies = [
+    "beautifulsoup4>=4.15",
+    "lxml>=6.1",
+    "pypdf>=6.21",
+    "scrapling[fetchers,rag]>=0.5",
+]
+
+[project.optional-dependencies]
+audio = ["faster-whisper>=1.0"]
+
+[project.scripts]
+paquete_plantilla = "paquete_plantilla.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.6,<0.7"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "C4"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["paquete_plantilla"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
