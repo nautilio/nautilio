@@ -55,11 +55,27 @@ def _flecha(x1: float, y: float, x2: float) -> str:
     )
 
 
+def _bajada(x: float, y1: float, y2: float) -> str:
+    return (
+        f'<line x1="{x}" y1="{y1}" x2="{x}" y2="{y2 - 8}" stroke="{TINTA}" stroke-width="1.4"/>'
+        f'<path d="M{x - 5},{y2 - 9} L{x},{y2} L{x + 5},{y2 - 9} Z" fill="{TINTA}"/>'
+    )
+
+
+def _cronaca(x: float, y: float, ancho: float) -> str:
+    return (
+        f'<rect x="{x}" y="{y}" width="{ancho}" height="74" fill="#F7F1E5" stroke="{TINTA}" stroke-width="2"/>'
+        f'<rect x="{x + 5}" y="{y + 5}" width="{ancho - 10}" height="64" fill="none" stroke="{TINTA}" stroke-width="0.7"/>'
+        f'<text x="{x + 22}" y="{y + 33}" font-family="{SERIF}" font-size="22" font-weight="700" letter-spacing="2" fill="{TINTA}">La Cronaca</text>'
+        f'<text x="{x + 22}" y="{y + 57}" font-family="{SERIF}" font-size="15" font-style="italic" fill="{GRIS}">el viaje contado para personas · make cronaca</text>'
+    )
+
+
 def flujo() -> str:
     ancho, alto = 1200, 634
     caja, paso, x0 = 172, 192, 36
     partes = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{ancho}" height="{alto}" viewBox="0 0 {ancho} {alto}" role="img" aria-label="Mapa del viaje de Nautilio: Il Viaggio, Le Muse y L’Eco">',
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{ancho}" height="{alto}" viewBox="0 0 {ancho} {alto}" role="img" aria-label="Mapa del viaje de Nautilio: Il Viaggio, Le Muse y L’Eco desembocan en La Cronaca">',
         "<defs>"
         f'<pattern id="tramado" width="2.6" height="2.6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="2.6" height="2.6" fill="{PAPEL}"/><path d="M0 0V2.6M0 0H2.6" stroke="{TINTA}" stroke-width=".9" opacity=".85"/></pattern>'
         '<filter id="grano" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7"/>'
@@ -82,6 +98,12 @@ def flujo() -> str:
             partes.append(_caja(x, y, caja, titulo, detalle, tramado=fila >= 1))
             if i < len(pasos) - 1:
                 partes.append(_flecha(x + caja, y + 37, x + paso))
+    x_cronaca = x0 + 4 * paso
+    ancho_cronaca = paso + caja
+    partes.append(_flecha(x0 + 3 * paso + caja, 486 + 37, x_cronaca))
+    partes.append(_bajada(x0 + 4 * paso + caja / 2, 322 + 74, 486))
+    partes.append(_bajada(x0 + 5 * paso + caja / 2, 158 + 74, 486))
+    partes.append(_cronaca(x_cronaca, 486, ancho_cronaca))
     partes.append(
         f'<text x="{x0}" y="600" font-family="{SERIF}" font-size="15" font-style="italic" fill="{GRIS}">Ninguna cifra sale del modelo de lenguaje: las cuenta el código y cada dato cita su fuente.</text>'
     )

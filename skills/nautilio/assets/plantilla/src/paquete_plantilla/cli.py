@@ -6,7 +6,7 @@ import argparse
 from collections.abc import Sequence
 from pathlib import Path
 
-from paquete_plantilla import config, eco
+from paquete_plantilla import config, cronaca, eco
 from paquete_plantilla.anuncios import cargar_anuncios, reporte_markdown, resumen
 from paquete_plantilla.demo import narrar, recorrer
 from paquete_plantilla.pipeline import capture, collect_status
@@ -45,6 +45,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     eco_parser.add_argument("marca", help="Nombre de la marca tal como la nombran los clientes")
     eco_parser.add_argument("--competidores", default="", help="Competidores separados por comas")
 
+    cronaca_parser = subparsers.add_parser(
+        "cronaca", help="La Cronaca: el viaje contado para personas, en HTML"
+    )
+    cronaca_parser.add_argument("--marca", default="", help="Marca para L'Eco (opcional)")
+    cronaca_parser.add_argument("--competidores", default="", help="Separados por comas")
+
     transcribir_parser = subparsers.add_parser(
         "transcribir",
         help="Transcribe un archivo local con el transcriptor opcional (extra audio)",
@@ -65,6 +71,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _anuncios(args.marca)
     if args.command == "eco":
         return _eco(args.marca, args.competidores)
+    if args.command == "cronaca":
+        return _cronaca(args.marca, args.competidores)
     if args.command == "transcribir":
         return _transcribir(Path(args.archivo), args.modelo, args.idioma)
     return _status()
@@ -152,10 +160,6 @@ def _transcribir(archivo: Path, modelo: str, idioma: str | None) -> int:
     return 0
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
-
-
 def _eco(marca: str, competidores: str) -> int:
     if not marca.strip():
         print('Falta la marca: make eco MARCA=<marca> COMPETIDORES="rival uno,rival dos"')
@@ -178,13 +182,12 @@ def _eco(marca: str, competidores: str) -> int:
     if not ruta.exists():
         print(f"L'Ascolto: aun no hay respuestas. Recogelas en {ruta} (una linea por respuesta).")
         return 0
-    rivales = [c.strip() for c in competidores.split(",") if c.strip()]
     escucha = eco.escuchar(
         preguntas,
         eco.cargar_respuestas(ruta),
         marca,
         config.DOMINIO,
-        rivales,
+        _rivales(competidores),
         eco.leer_corpus(config.CORPUS_PATH),
     )
     reporte = eco.reporte_markdown(
@@ -203,3 +206,40 @@ def _eco(marca: str, competidores: str) -> int:
     )
     print(f"Reporte: {reporte}")
     return 0
+
+
+def _rivales(competidores: str) -> list[str]:
+    rivales = [c.strip() for c in competidores.split(",") if c.strip()]
+    return rivales or eco.cargar_competidores()
+
+
+def _cronaca(marca: str, competidores: str) -> int:
+    escucha = por_motor = de_marca = None
+    if marca.strip():
+        ruta = eco.ruta_respuestas(marca)
+        if ruta.exists():
+            preguntas = eco.cargar_domande()
+            respuestas = eco.cargar_respuestas(ruta)
+            contexto = (
+                marca,
+                config.DOMINIO,
+                _rivales(competidores),
+                eco.leer_corpus(config.CORPUS_PATH),
+            )
+            escucha = eco.escuchar(preguntas, respuestas, *contexto)
+            por_motor = eco.escuchar_por_motor(preguntas, respuestas, *contexto)
+            de_marca = eco.respuestas_de_marca(preguntas, respuestas, maximo=4000)
+    datos = cronaca.reunir(
+        eco=escucha, eco_marca=marca.strip(), eco_por_motor=por_motor, eco_de_marca=de_marca
+    )
+    if not datos.documentos:
+        print("Aun no hay viaje que contar: corre make capture primero (o make demo).")
+        return 2
+    ruta_html = cronaca.escribir(datos)
+    print(f"La Cronaca: {ruta_html}")
+    print("Abrela en el navegador; desde ahi se imprime como PDF.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

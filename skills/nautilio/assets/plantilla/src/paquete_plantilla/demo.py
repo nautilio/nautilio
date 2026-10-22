@@ -16,13 +16,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from paquete_plantilla import config
+from paquete_plantilla import config, cronaca
 from paquete_plantilla.anuncios import cargar_anuncios, reporte_markdown, resumen
 from paquete_plantilla.config import Seed
 from paquete_plantilla.eco import (
     Pregunta,
     Respuesta,
     escuchar,
+    escuchar_por_motor,
     leer_corpus,
     respuestas_de_marca,
     validar_domande,
@@ -40,19 +41,27 @@ CIUDAD: dict[str, tuple[int, str, str]] = {
     "/": (
         200,
         _HTML,
-        "<html><head><title>Citta di prova</title></head><body><main>"
+        "<html><head><title>Citta di prova</title>"
+        '<meta property="og:title" content="Citta di prova">'
+        '<meta property="og:description" content="Tiendas propias en tres ciudades y '
+        'entregas a domicilio todos los días.">'
+        '<meta property="og:image" content="/portada.jpg">'
+        "</head><body><main>"
         "<h1>Citta di prova</h1>"
-        "<p>Una empresa de prueba con tiendas, productos y un equipo de atencion.</p>"
-        '<p><a href="/quienes-somos">Quienes somos</a></p>'
-        "</main></body></html>",
+        "<p>Una empresa de prueba con tiendas propias en tres ciudades, productos de temporada "
+        "y un equipo de atención al cliente. Desde 1958 vende a domicilio y "
+        "abre sus tiendas los siete días de la semana.</p>"
+        '<p><a href="/quienes-somos">Quiénes somos</a></p>'
+        '</main><footer><a href="https://www.instagram.com/cittadiprova/">Instagram</a> '
+        '<a href="https://www.facebook.com/cittadiprova">Facebook</a></footer></body></html>',
     ),
     "/quienes-somos": (
         200,
         _HTML,
-        "<html><head><title>Quienes somos</title></head><body><main>"
-        "<h1>Quienes somos</h1>"
+        "<html><head><title>Quiénes somos</title></head><body><main>"
+        "<h1>Quiénes somos</h1>"
         "<p>Fundada en 1958, la empresa atiende tres ciudades.</p>"
-        "<p>Atencion al cliente: escribe a maria.perez@gmail.com"
+        "<p>Atención al cliente: escribe a maria.perez@gmail.com"
         " o llama al +57 310 555 1234.</p>"
         "<p>Gerente de tienda: Juan Ruiz, C.C. 1.144.555.666, juan.ruiz@hotmail.com.</p>"
         "</main></body></html>",
@@ -103,7 +112,7 @@ ANUNCIOS_MUESTRA: list[dict[str, Any]] = [
         "plataforma": "google",
         "pagina": "Marca Demo",
         "formato": "video",
-        "texto": "Cincuenta anos de historia.",
+        "texto": "Cincuenta años de historia.",
         "titulo": "Historia",
         "cta": "Ver mas",
         "url_destino": "https://ejemplo.com/historia",
@@ -147,7 +156,7 @@ ECO_PREGUNTAS = (
         persona="familia de cuatro",
         situacion="comprar a domicilio",
         restricciones="presupuesto medio, tres ciudades",
-        prompt="Que empresa en tres ciudades vende a domicilio productos de temporada "
+        prompt="¿Qué empresa en tres ciudades vende a domicilio productos de temporada "
         "para una familia de cuatro con presupuesto medio?",
         insumo="ventas",
         resultado_negocio="pedidos a domicilio",
@@ -159,9 +168,9 @@ ECO_PREGUNTAS = (
         producto="tiendas",
         persona="cliente que ya compra a un rival",
         situacion="cambiar de proveedor",
-        restricciones="atencion rapida",
-        prompt="Que alternativas hay a Rival Uno para comprar productos de temporada "
-        "con atencion al cliente rapida?",
+        restricciones="atención rápida",
+        prompt="¿Qué alternativas hay a Rival Uno para comprar productos de temporada "
+        "con atención al cliente rápida?",
         insumo="soporte",
         resultado_negocio="clientes nuevos",
     ),
@@ -173,8 +182,8 @@ ECO_PREGUNTAS = (
         persona="persona que se muda a la ciudad",
         situacion="buscar una empresa confiable",
         restricciones="trayectoria larga, varias ciudades",
-        prompt="Que empresas con decadas de trayectoria tienen tiendas en varias ciudades "
-        "y buena atencion al cliente?",
+        prompt="¿Qué empresas con décadas de trayectoria tienen tiendas en varias ciudades "
+        "y buena atención al cliente?",
         insumo="foros",
         resultado_negocio="reconocimiento de marca",
     ),
@@ -183,11 +192,11 @@ ECO_PREGUNTAS = (
         set="conversacional",
         etapa="decision",
         producto="pedidos para oficinas",
-        persona="oficina pequena",
+        persona="oficina pequeña",
         situacion="pedido urgente",
-        restricciones="envio el mismo dia, pedido minimo bajo",
-        prompt="Donde comprar con envio el mismo dia para una oficina pequena con pedido "
-        "minimo bajo?",
+        restricciones="envío el mismo día, pedido mínimo bajo",
+        prompt="¿Dónde comprar con envío el mismo día para una oficina pequeña con pedido "
+        "mínimo bajo?",
         insumo="ventas",
         resultado_negocio="pedidos corporativos",
     ),
@@ -199,7 +208,7 @@ ECO_PREGUNTAS = (
         persona="",
         situacion="",
         restricciones="",
-        prompt="Que es Citta di prova y donde tiene tiendas?",
+        prompt="¿Qué es Citta di prova y dónde tiene tiendas?",
         insumo="brief",
         resultado_negocio="narrativa de marca",
     ),
@@ -211,7 +220,7 @@ ECO_PREGUNTAS = (
         persona="",
         situacion="",
         restricciones="",
-        prompt="Citta di prova tiene buena atencion al cliente?",
+        prompt="¿Citta di prova tiene buena atención al cliente?",
         insumo="brief",
         resultado_negocio="narrativa de marca",
     ),
@@ -221,7 +230,7 @@ ECO_RESPUESTAS = (
         "c1",
         "motor-a",
         "2026-10-22",
-        "Citta di prova vende a domicilio en tres ciudades; Rival Uno tambien es una opcion.",
+        "Citta di prova vende a domicilio en tres ciudades; Rival Uno también es una opción.",
         ("https://citta-di-prova.example/",),
     ),
     Respuesta("c1", "motor-b", "2026-10-22", "Prueba Rival Uno.", ("https://rival-uno.example/",)),
@@ -229,7 +238,7 @@ ECO_RESPUESTAS = (
         "c2",
         "motor-a",
         "2026-10-22",
-        "Rival Dos y Citta di prova responden rapido.",
+        "Rival Dos y Citta di prova responden rápido.",
         ("https://blog.example/comparativa",),
     ),
     Respuesta(
@@ -243,18 +252,98 @@ ECO_RESPUESTAS = (
         "c4",
         "motor-a",
         "2026-10-22",
-        "Rival Dos envia el mismo dia.",
+        "Rival Dos envía el mismo día.",
         ("https://rival-dos.example/",),
     ),
     Respuesta(
         "m1",
         "motor-a",
         "2026-10-22",
-        "Citta di prova es una empresa con tiendas, productos y atencion al cliente.",
+        "Citta di prova es una empresa con tiendas, productos y atención al cliente.",
         (),
     ),
-    Respuesta("m2", "motor-b", "2026-10-22", "No tengo informacion suficiente sobre ella.", ()),
+    Respuesta("m2", "motor-b", "2026-10-22", "No tengo información suficiente sobre ella.", ()),
 )
+
+
+def _scoperte_demo(base: str) -> dict[str, Any]:
+    """Hallazgos de muestra como los redactaria el agente. El tercero cita algo que el sitio
+    no dice: el codigo lo descarta y no llega a La Cronaca."""
+    return {
+        "hallazgos": [
+            {
+                "tema": "Servicio",
+                "hallazgo": "Vende a domicilio y no cierra ningún día de la semana.",
+                "cita": "Desde 1958 vende a domicilio y abre sus tiendas los siete días de la "
+                "semana.",
+                "url_cita": f"{base}/",
+            },
+            {
+                "tema": "Historia",
+                "hallazgo": "Lleva más de seis décadas en el oficio y hoy atiende tres ciudades.",
+                "cita": "Fundada en 1958, la empresa atiende tres ciudades.",
+                "url_cita": f"{base}/quienes-somos",
+            },
+            {
+                "tema": "Historia",
+                "hallazgo": "Tiene tiendas en cinco países.",
+                "cita": "Fundada en 1958, la empresa atiende cinco países.",
+                "url_cita": f"{base}/quienes-somos",
+            },
+        ],
+        "vacios": [
+            {
+                "tema": "Costo del envío",
+                "por_que_importa": "Quien pide a domicilio quiere saber cuánto paga antes de "
+                "pedir.",
+            }
+        ],
+        "insights": [
+            {
+                "titulo": "Su fuerza es la constancia: décadas vendiendo a domicilio",
+                "por_que_importa": "Es lo que la distingue de un rival nuevo, y el sitio lo dice "
+                "dos veces.",
+                "hallazgos": ["h1", "h2"],
+            }
+        ],
+    }
+
+
+def _risposta_demo(base: str) -> dict[str, Any]:
+    """Acciones de muestra: lo primero que haria la marca con lo encontrado."""
+    return {
+        "gran_idea": "Citta di prova aparece en 2 de 4 preguntas a los asistentes, pero su sitio "
+        "no dice lo primero que pregunta quien compra a domicilio: cuánto cuesta el envío.",
+        "historia": [
+            "Desde 1958 vende a domicilio en tres ciudades: es su diferencia.",
+            "Los asistentes la recomiendan en 2 de 4 preguntas y Rival Uno aparece más.",
+            "Lo primero es publicar el costo del envío; lo demás puede esperar un mes.",
+        ],
+        "acciones": [
+            {
+                "titulo": "Una página de envíos que diga cuánto cuesta y cuándo llega",
+                "prioridad": 1,
+                "resultado": "que el asistente la recomiende cuando alguien pregunta por envíos",
+                "esfuerzo": "bajo",
+                "cuando": "hoy",
+                "que_debe_decir": [
+                    "Costo del envío en cada ciudad",
+                    "Pedido mínimo y hora de corte para recibir el mismo día",
+                ],
+                "evidencia_disponible": [f"{base}/"],
+                "falta_confirmar": ["el costo del envío", "el pedido mínimo"],
+            },
+            {
+                "titulo": "Quiénes somos con las tres ciudades por su nombre",
+                "prioridad": 2,
+                "esfuerzo": "bajo",
+                "cuando": "este mes",
+                "que_debe_decir": ["Las tres ciudades y la dirección de cada tienda"],
+                "evidencia_disponible": [f"{base}/quienes-somos"],
+                "falta_confirmar": ["las direcciones de las tiendas"],
+            },
+        ],
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -266,6 +355,8 @@ class ResultadoDemo:
     reporte_muse: Path
     eco: dict[str, Any]
     reporte_eco: Path
+    cronaca: Path
+    datos_cronaca: cronaca.DatosCronaca
     destino: Path
 
 
@@ -295,7 +386,7 @@ def recorrer(destino: Path = DEMO_DIR, paso: float = PASO_DEMO) -> ResultadoDemo
         Seed(
             id="quienes-somos",
             url=f"{base}/quienes-somos",
-            titulo="Quienes somos",
+            titulo="Quiénes somos",
             categoria="demo",
         ),
         Seed(id="privado", url=f"{base}/privado", titulo="Zona privada", categoria="demo"),
@@ -338,12 +429,37 @@ def recorrer(destino: Path = DEMO_DIR, paso: float = PASO_DEMO) -> ResultadoDemo
         respuestas_de_marca(ECO_PREGUNTAS, ECO_RESPUESTAS),
         salida=destino / "gold" / "eco-demo.md",
     )
+    for nombre, contenido in (
+        ("hallazgos.json", _scoperte_demo(base)),
+        ("risposta.json", _risposta_demo(base)),
+    ):
+        (destino / "gold" / nombre).write_text(
+            json.dumps(contenido, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    datos = cronaca.reunir(
+        raw_dir=destino / "raw",
+        gold_dir=destino / "gold",
+        eco_dir=destino / "eco",
+        empresa=MARCA_DEMO,
+        dominio=DOMINIO_DEMO,
+        eco=escucha,
+        eco_marca=MARCA_DEMO,
+        muse=[{"marca": "Marca Demo", **resumen(anuncios)}],
+        paso=paso,
+        eco_por_motor=escuchar_por_motor(
+            ECO_PREGUNTAS, ECO_RESPUESTAS, MARCA_DEMO, DOMINIO_DEMO, RIVALES_DEMO, corpus
+        ),
+        eco_de_marca=respuestas_de_marca(ECO_PREGUNTAS, ECO_RESPUESTAS, maximo=4000),
+    )
+    ruta_cronaca = cronaca.escribir(datos, destino / "gold" / "cronaca.html")
     return ResultadoDemo(
         viaje=viaje,
         muse=resumen(anuncios),
         reporte_muse=reporte,
         eco=escucha,
         reporte_eco=ruta_eco,
+        cronaca=ruta_cronaca,
+        datos_cronaca=datos,
         destino=destino,
     )
 
@@ -378,6 +494,12 @@ def narrar(
     citas = _n(eco["citas_propias"], "cita propia", "citas propias")
     brechas = _n(len(eco["brechas"]), "brecha", "brechas")
     responde = eco["cubiertas"]
+    scoperte = resultado.datos_cronaca.scoperte
+    hallados = _n(len(scoperte["hallazgos"]), "hallazgo", "hallazgos")
+    descartados = _n(len(scoperte["descartados"]), "descartado", "descartados")
+    sitio = resultado.datos_cronaca.specchio or {"paginas": 0, "paginas_con_og_completo": 0}
+    perfiles = _n(len(sitio.get("perfiles", {})), "perfil social", "perfiles sociales")
+    acciones = resultado.datos_cronaca.acciones
 
     lineas = [
         "",
@@ -392,12 +514,22 @@ def narrar(
         f"Paradiso     {citables} en {_relativa(resultado.destino / 'gold')}, con su fuente",
         f"Limbo        {limbo} revisión humana",
         "",
+        f"Le Scoperte  {hallados} con su cita; {descartados} porque su cita no está en el sitio",
+        f"Lo Specchio  vista previa completa en {sitio['paginas_con_og_completo']} de "
+        f"{sitio['paginas']} páginas; {perfiles} enlazados",
+        "",
         f"Le Muse      {anuncios}: {unicos} y {repetidos}",
         f"             lectura en {_relativa(resultado.reporte_muse)}",
         "",
         f"L'Eco        la marca aparece en {aparece}; share of voice {eco['share_of_voice']:g} %",
         f"             {citas}; {brechas}, y el Paradiso ya responde {responde}",
         f"             escucha en {_relativa(resultado.reporte_eco)}",
+        "",
+        f"La Risposta  {_n(len(acciones), 'acción', 'acciones')}; la primera: "
+        f"{acciones[0]['titulo'] if acciones else '-'}",
+        "",
+        f"La Cronaca   el viaje contado para personas: {_relativa(resultado.cronaca)}",
+        "             ábrela en el navegador; se imprime como PDF",
         "",
         "Il Giudizio  tu turno:",
         "  1. Pon tu correo en CONTACTO (config.py).",

@@ -22,6 +22,8 @@ DOMINIO = "{{DOMINIO}}"
 # Correo de quien captura, nunca uno del dominio de la empresa: el robot no se hace pasar
 # por ella. `make capture` se niega a correr mientras este campo este vacio.
 CONTACTO = ""
+# Siguiente paso de La Cronaca: correo o enlace de quien ofrece ayuda. Vacio = no se muestra.
+CONTACTO_INFORME = ""
 NOMBRE_TECNICO = "paquete_plantilla"
 USER_AGENT = f"{NOMBRE_TECNICO}/0.1 (proyecto academico; contacto: {CONTACTO or 'sin configurar'})"
 

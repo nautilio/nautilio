@@ -1,4 +1,8 @@
 <p align="center">
+    <img alt="Nautilio, la criatura con púas que recorre la ciudad de los datos" src="docs/assets/criatura.png" width="380">
+</p>
+
+<p align="center">
     <img alt="Nautilio: per me si va ne la città dei dati" src="docs/assets/portada.svg">
 </p>
 
@@ -26,6 +30,15 @@ y la marca que quieres leer, y arma un proyecto que recorre los datos públicos 
 círculo: entra por la puerta, baja sin prisa, deja lo personal en el río del
 olvido y sale con lo que se puede citar.
 
+Al final te entrega **La Cronaca**: un informe que abre con la idea en una frase, muestra qué
+dicen de la marca los asistentes de IA y termina con qué hacer primero. Cada hallazgo trae la
+frase exacta del sitio que lo sostiene. Así se ve la del viaje de prueba, que corres en tu
+máquina en segundos y sin internet:
+
+<p align="center">
+    <img alt="La Cronaca del viaje de prueba: la idea en una frase, la historia en tres minutos y lo que responden los asistentes" src="docs/assets/cronaca-demo.png" width="620">
+</p>
+
 ## El viaje
 
 Nautilio tiene tres brazos.
@@ -38,8 +51,13 @@ Nautilio tiene tres brazos.
   Mide si la recomiendan, si usan su sitio como fuente y en qué preguntas gana la
   competencia, y dice si el Paradiso ya tiene la página que responde.
 
+Los tres desembocan en **La Cronaca** (`make cronaca`): un informe en tinta sobre papel que
+se abre en el navegador y se imprime como PDF. Primero la idea y la historia en tres minutos;
+después la tensión (qué dicen los asistentes), la evidencia (el sitio, cómo se ve al
+compartirlo, qué anuncia) y la resolución: acciones en orden, con esfuerzo y plazo.
+
 <p align="center">
-    <img alt="El mapa del viaje: Il Viaggio, Le Muse y L'Eco" src="docs/assets/flujo.svg">
+    <img alt="El mapa del viaje: Il Viaggio, Le Muse y L'Eco desembocan en La Cronaca" src="docs/assets/flujo.svg">
 </p>
 
 ## El mapa
@@ -58,7 +76,10 @@ Nautilio tiene tres brazos.
 | **Il Ritratto** | El retrato de la marca: contexto, foco y cómo quiere ser descrita. |
 | **Le Domande** | Las preguntas que hace la gente, sin nombrar la marca. |
 | **L'Ascolto** | Lo que responden los asistentes, contado por el código. |
-| **La Risposta** | Cada brecha cruzada con el Paradiso: reforzar o escribir. |
+| **La Risposta** | Cada brecha cruzada con el Paradiso y lo que conviene hacer primero. |
+| **Le Scoperte** | Los hallazgos. Si su cita no está en el sitio, no pasan. |
+| **Lo Specchio** | El sitio visto desde las redes: la vista previa y los perfiles que enlaza. |
+| **La Cronaca** | El viaje contado para personas. |
 | **Il Giudizio** | La revisión final antes de publicar nada (`make check`). |
 
 ## Instalación
@@ -93,25 +114,32 @@ Nautilio arma el proyecto y, antes de pedirte nada más, te muestra el viaje com
 
 ### El primer encuentro
 
+Con uv instalado, monta un proyecto de prueba y corre la demo:
+
 ```bash
+python skills/nautilio/scripts/montar_pipeline.py --empresa "Empresa Demo" --dominio ejemplo.com --path ./empresa-demo
+cd empresa-demo
+uv sync
 make demo
 ```
 
-En unos segundos, sin internet ni configuración, Nautilio recorre una ciudad de prueba en tu
-propia máquina y te cuenta lo que pasó:
+Sin `make` (por ejemplo en Windows), el último paso es `uv run empresa_demo demo`. Después de
+instalar las dependencias, la demo no usa internet: en unos segundos Nautilio recorre una
+ciudad de prueba en tu propia máquina y te cuenta lo que pasó:
 
 ```text
 La Porta     dejó pasar 2 páginas y cerró 1 que el sitio prohíbe
 Caronte      negó el paso y detuvo el viaje; 1 página quedó sin visitar
 Purgatorio   el Lete borró 4 datos personales: 2 correos, 1 teléfono y 1 identificación
 Paradiso     2 documentos citables en data/demo/gold, con su fuente
+Le Scoperte  2 hallazgos con su cita; 1 descartado porque su cita no está en el sitio
 Le Muse      6 anuncios: 4 creativos únicos y 2 repetidos
 L'Eco        la marca aparece en 2 de 4 preguntas (50 %); share of voice 25 %
-             1 cita propia; 2 brechas, y el Paradiso ya responde 1
+La Cronaca   el viaje contado para personas: data/demo/gold/cronaca.html
 ```
 
-Después es tu turno: pon tu correo, elige páginas reales que den permiso y corre
-`make capture`.
+Abre `data/demo/gold/cronaca.html` en el navegador: así se ve el entregable. Después es tu
+turno: pon tu correo, elige páginas reales que den permiso y corre `make capture`.
 
 ## Le leggi
 
@@ -121,6 +149,7 @@ Después es tu turno: pon tu correo, elige páginas reales que den permiso y cor
 - Lo personal pasa siempre por el Lete; los datos de menores no entran.
 - El proyecto nace privado y nunca publica copias completas de un sitio.
 - Las cifras las cuenta el código, no el modelo de lenguaje.
+- Sin cita no hay hallazgo.
 - *Inspírate, no copies.*
 
 ## Licencia

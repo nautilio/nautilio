@@ -29,6 +29,7 @@ from paquete_plantilla.config import DATA_DIR, GOLD_DIR, RAW_DIR
 ECO_DIR = DATA_DIR / "eco"
 RITRATTO_PATH = ECO_DIR / "ritratto.csv"
 DOMANDE_PATH = ECO_DIR / "domande.csv"
+COMPETIDORES_PATH = ECO_DIR / "competidores.json"
 ASCOLTO_DIR = RAW_DIR / "eco"
 
 SETS = ("conversacional", "marca")
@@ -360,6 +361,7 @@ def escuchar(
     visibles: set[str] = set()
     con_respuesta: set[str] = set()
     posiciones: list[int] = []
+    apariciones: list[dict[str, Any]] = []
     citas_propias = 0
     rivales_por_prompt: dict[str, set[str]] = {}
     propia_por_prompt: dict[str, bool] = {}
@@ -377,6 +379,14 @@ def escuchar(
         if marca in nombrados:
             visibles.add(respuesta.prompt_id)
             posiciones.append(nombrados.index(marca) + 1)
+            apariciones.append(
+                {
+                    "prompt_id": respuesta.prompt_id,
+                    "prompt": por_id[respuesta.prompt_id].prompt,
+                    "motor": respuesta.motor,
+                    "posicion": nombrados.index(marca) + 1,
+                }
+            )
         rivales = {nombre for nombre in nombrados if nombre != marca}
         rivales_por_prompt.setdefault(respuesta.prompt_id, set()).update(rivales)
         presente = marca in nombrados or cita_propia
@@ -408,6 +418,7 @@ def escuchar(
         "menciones": {nombre: menciones.get(nombre, 0) for nombre in nombres},
         "share_of_voice": _porcentaje(menciones.get(marca, 0), total_menciones),
         "posicion_promedio": round(sum(posiciones) / len(posiciones), 2) if posiciones else None,
+        "apariciones": apariciones,
         "citas_propias": citas_propias,
         "dominios_citados": dict(dominios.most_common(10)),
         "brechas": brechas,
@@ -415,8 +426,40 @@ def escuchar(
     }
 
 
+def escuchar_por_motor(
+    preguntas: Sequence[Pregunta],
+    respuestas: Sequence[Respuesta],
+    marca: str,
+    dominio: str,
+    competidores: Sequence[str],
+    corpus: Sequence[Mapping[str, Any]] = (),
+) -> dict[str, dict[str, Any]]:
+    """La misma escucha separada por motor: lo que dice cada uno por su cuenta."""
+    motores = sorted({respuesta.motor for respuesta in respuestas})
+    return {
+        motor: escuchar(
+            preguntas,
+            [respuesta for respuesta in respuestas if respuesta.motor == motor],
+            marca,
+            dominio,
+            competidores,
+            corpus,
+        )
+        for motor in motores
+    }
+
+
+def cargar_competidores(path: Path = COMPETIDORES_PATH) -> list[str]:
+    """Competidores que aparecieron en las respuestas, en ``data/eco/competidores.json``."""
+    if not path.exists():
+        return []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    nombres = data.get("competidores", []) if isinstance(data, dict) else data
+    return [str(nombre).strip() for nombre in nombres if str(nombre).strip()]
+
+
 def respuestas_de_marca(
-    preguntas: Sequence[Pregunta], respuestas: Sequence[Respuesta]
+    preguntas: Sequence[Pregunta], respuestas: Sequence[Respuesta], maximo: int = 220
 ) -> list[dict[str, str]]:
     """Lo que dicen los motores en el set de marca, para compararlo con Il Ritratto."""
     de_marca = {p.id: p for p in preguntas if p.set == "marca"}
@@ -424,7 +467,7 @@ def respuestas_de_marca(
         {
             "prompt": de_marca[r.prompt_id].prompt,
             "motor": r.motor,
-            "respuesta": _recortar(r.respuesta, 220),
+            "respuesta": _recortar(r.respuesta, maximo),
         }
         for r in respuestas
         if r.prompt_id in de_marca
@@ -529,7 +572,9 @@ def leer_corpus(path: Path) -> list[dict[str, Any]]:
         texto = ""
         archivo = path.parent / Path(ruta_gold).name if ruta_gold else None
         if archivo and archivo.exists():
-            texto = archivo.read_text(encoding="utf-8")
+            texto = re.sub(
+                r"\A---\n.*?\n---\n", "", archivo.read_text(encoding="utf-8"), flags=re.S
+            )
         documentos.append({"url": registro.get("url_cita", ""), "texto": texto})
     return documentos
 

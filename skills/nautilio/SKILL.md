@@ -1,12 +1,12 @@
 ---
 name: nautilio
-description: "Nautilio guía tres viajes sobre los datos públicos de cualquier empresa. Il Viaggio cruza La Porta (robots.txt y términos), avanza con Il Passo, se detiene ante Caronte y lleva pocas páginas públicas por Inferno, Purgatorio y Paradiso: el Lete borra los datos personales y queda un corpus citable. Le Muse lee los anuncios públicos de una marca para inspirarse sin copiar. L'Eco mide lo que los motores de respuesta dicen de la marca: brief, matriz de preguntas, visibilidad, share of voice, citas y brechas frente al Paradiso. Úsala para preparar un corpus citable para RAG, auditar el enmascarado, analizar la pauta pública de una competencia o mejorar la visibilidad de una marca en asistentes de IA. No sirve para crawling masivo, redes sociales, áreas autenticadas, datos de menores ni para automatizar consultas a los motores."
+description: "Nautilio guía tres viajes sobre los datos públicos de cualquier empresa y los entrega en La Cronaca, un informe HTML para personas. Il Viaggio cruza La Porta (robots.txt y términos), avanza con Il Passo, se detiene ante Caronte y lleva pocas páginas públicas por Inferno, Purgatorio y Paradiso: el Lete borra los datos personales. Le Muse lee los anuncios públicos de una marca sin copiarlos. L'Eco mide lo que dicen los asistentes de IA: visibilidad, share of voice, citas y brechas. La Cronaca suma hallazgos con cita comprobada, la vista al compartir el sitio y qué hacer primero. Úsala para un corpus citable para RAG, auditar el enmascarado, estudiar la pauta de una competencia o mejorar la visibilidad en asistentes. No sirve para crawling masivo, redes sociales, áreas autenticadas, datos de menores ni para automatizar consultas a los motores."
 license: MIT
 allowed-tools: Read Write Edit Glob Grep WebFetch Bash(python:*) Bash(uv:*) Bash(make:*) Bash(git init:*) Bash(git status:*)
 compatibility: "Requiere Python 3 (el script de montaje usa solo la biblioteca estándar). El proyecto generado usa uv y Python 3.13, y funciona en macOS, Linux y Windows. El transcriptor local es opcional (extra audio)."
 metadata:
   author: Christian Trujillo
-  version: "2.1"
+  version: "2.2"
 ---
 
 # Nautilio — tres viajes por los datos públicos
@@ -22,6 +22,10 @@ Nautilio guía tres viajes sobre un mismo proyecto reproducible:
    prueba y por qué. Lema: **«Inspírate, no copies»**.
 3. **L'Eco** escucha lo que los motores de respuesta dicen de la marca: si la recomiendan,
    si la usan como fuente y dónde la dejan por fuera. Cada brecha se cruza con el Paradiso.
+
+Los tres terminan en **La Cronaca**: un HTML en tinta sobre papel que cuenta lo encontrado
+para personas, con cada hallazgo atado a la frase del sitio que lo sostiene, y que cierra con
+qué hacer primero. Es el entregable; lo demás es su archivo.
 
 ## Mapa del viaje
 
@@ -45,7 +49,10 @@ documento usa el nombre.
 | **Il Ritratto** | El brief: contexto, foco y narrativa | `data/eco/ritratto.csv` |
 | **Le Domande** | La matriz de preguntas | `data/eco/domande.csv` |
 | **L'Ascolto** | Respuestas recogidas en los motores | `data/raw/eco/<marca>.jsonl` |
-| **La Risposta** | Brechas cruzadas con el Paradiso | `data/gold/eco-<marca>.md` |
+| **La Risposta** | Brechas cruzadas con el Paradiso y acciones en orden | `data/gold/eco-<marca>.md` y `data/gold/risposta.json` |
+| **Le Scoperte** | Hallazgos y vacíos; el código comprueba cada cita | `data/gold/hallazgos.json` y `scoperte.py` |
+| **Lo Specchio** | Vista previa al compartir, perfiles enlazados y señales sociales | `specchio.py` sobre el HTML del Inferno |
+| **La Cronaca** | El viaje contado para personas | `make cronaca MARCA=<marca>` → `data/gold/cronaca.html` |
 
 ## Invocación
 
@@ -81,12 +88,13 @@ make demo
 `make demo` levanta una ciudad de prueba en `127.0.0.1`, sin internet ni configuración, y
 recorre los círculos con el mismo código del viaje real. Muestra, con cifras que cuenta el
 código, cómo La Porta cierra una página prohibida, cómo Caronte detiene el viaje, cuánto borra
-el Lete y qué llega al Paradiso. Le Muse lee además unos anuncios de muestra. Tarda unos
-segundos y escribe en `data/demo/`, que git ignora.
+el Lete y qué llega al Paradiso. Le Muse lee además unos anuncios de muestra, L'Eco escucha
+unas respuestas de muestra y Le Scoperte prueba tres hallazgos: el que cita algo que el sitio
+no dice se descarta solo. Tarda unos segundos y escribe en `data/demo/`, que git ignora.
 
-Muestra esa salida tal cual y termina con el siguiente paso que ella misma propone: poner el
-contacto, cambiar las semillas y correr `make capture`. No inventes cifras ni resumas lo que
-la demo ya dice.
+Muestra esa salida tal cual, invita a abrir `data/demo/gold/cronaca.html` y termina con el
+siguiente paso que ella misma propone: poner el contacto, cambiar las semillas y correr
+`make capture`. No inventes cifras ni resumas lo que la demo ya dice.
 
 ## Il Viaggio
 
@@ -272,6 +280,14 @@ La persona hace cada pregunta en los motores y guarda las respuestas en
 solo puede hacerlo con una API autorizada. **No automatices el acceso a un motor ni inventes
 respuestas.**
 
+- Usa al menos un motor **con búsqueda web**: es el único que puede citar el sitio. Un motor
+  que responde de memoria muestra otra cosa: cómo describe a la marca sin mirarla.
+- En `motor` escribe lo que el lector entiende («con búsqueda web», «sin búsqueda web») y
+  guarda el nombre técnico en `motor_tecnico`.
+- Los competidores salen de las respuestas, no de la intuición: los nombres que aparecen en
+  dos o más respuestas van a `data/eco/competidores.json` (`{"competidores": [...]}`), y
+  `make eco` los toma de ahí si no se pasa `COMPETIDORES`.
+
 ### La Risposta
 
 ```bash
@@ -282,7 +298,40 @@ El código calcula visibilidad, share of voice, posición promedio, citas propia
 citados, y lista las brechas. Para cada brecha dice si el Paradiso ya tiene una página
 relacionada o si falta contenido. El reporte queda en `data/gold/eco-<marca>.md`. Muestra sus
 cifras tal cual y propone qué página reforzar o escribir, con pruebas públicas y sin los claims
-a evitar del Ritratto.
+a evitar del Ritratto. La página que el código asocia a una brecha es solo la más cercana por
+palabras; confirma que de verdad responde antes de decir que ya existe.
+
+## La Cronaca
+
+Lo que la persona abre al final. Las cifras las cuenta el código; tú redactas tres archivos y
+el código decide qué llega. Esquemas y ejemplos en
+[`references/la-cronaca.md`](references/la-cronaca.md).
+
+1. **Le Scoperte.** Lee todo el Paradiso y escribe `data/gold/hallazgos.json`: entre 10 y 16
+   hallazgos agrupados por tema, cada uno con la frase **literal** del sitio que lo sostiene y
+   su `url_cita`, y entre 4 y 8 vacíos (lo que el cliente necesita para decidir y las páginas
+   leídas no dicen). Un hallazgo dice solo lo que su cita sostiene. El código descarta la
+   cita que no aparece letra por letra o que trae un dato enmascarado.
+2. **Lo Specchio.** No se redacta: el código lee el HTML del Inferno (el pie de página
+   incluido) y cuenta la vista previa al compartir, los perfiles enlazados y lo que conviene
+   corregir. No visita ningún perfil.
+3. **Le Muse.** Si la búsqueda en las bibliotecas de anuncios no encuentra nada de la marca,
+   no lo calles: guarda las consultas en `data/gold/muse-sin-anuncios.json`.
+4. **La Risposta.** Escribe `data/gold/risposta.json`: de 4 a 6 acciones en orden de impacto,
+   cada una atada a una brecha, un vacío, un hallazgo o un error de los asistentes, con su
+   resultado, esfuerzo y plazo (`hoy`, `este mes`, `este semestre`). Lo que solo la empresa
+   sabe va en `falta_confirmar`; la evidencia solo puede ser una `url_cita`.
+5. **La idea primero.** Encabeza el mismo archivo con `gran_idea` (una frase con punto de
+   vista) e `historia` (tres frases), y agrupa los hallazgos bajo 3 a 5 `insights`. Solo
+   cifras que existan en los datos: el código descarta la frase con un número inventado.
+
+```bash
+make cronaca MARCA="<marca>"
+```
+
+Escribe para la persona que decide, no para el equipo técnico: frases cortas, sin códigos de
+pregunta, rutas, nombres de herramientas ni de motores, y sin atributos de la competencia que
+haya dicho un motor. Si queda la sección «Para completar el viaje», di qué falta y por qué.
 
 ## Reglas no negociables
 
@@ -303,6 +352,8 @@ a evitar del Ritratto.
 13. **Inspírate, no copies.** No se reutiliza texto, guion, voz, imagen ni visual ajeno.
 14. **L'Eco escucha, no automatiza.** Las respuestas las recoge una persona o una API
     autorizada; nunca se inventan ni se sacan con un robot.
+15. **Sin cita no hay hallazgo.** Lo que el código no puede comprobar contra el Paradiso no
+    llega a La Cronaca.
 
 ## Lista de Il Giudizio
 
@@ -324,6 +375,8 @@ a evitar del Ritratto.
 - [ ] Il Ritratto con la fuente de cada dato o «por confirmar».
 - [ ] Le Domande sin avisos de `make eco` y cada pregunta con resultado de negocio.
 - [ ] L'Ascolto con respuestas reales y el reporte de L'Eco generado por el código.
+- [ ] Le Scoperte sin hallazgos descartados y La Risposta sin datos inventados.
+- [ ] La Cronaca leída de principio a fin antes de compartirla.
 - [ ] `make check` en verde.
 - [ ] Repositorio privado y sin copias completas del sitio.
 
@@ -336,3 +389,4 @@ a evitar del Ritratto.
 | [`references/tre-regni.md`](references/tre-regni.md) | Inferno, Purgatorio y Paradiso: qué guarda cada reino y qué se versiona. |
 | [`references/le-muse.md`](references/le-muse.md) | Raccolta, Conteggio, Lettura e Ispirazione: JSONL, prompt de análisis y reglas. |
 | [`references/l-eco.md`](references/l-eco.md) | Il Ritratto, Le Domande, L'Ascolto y La Risposta: menciones, citas y brechas. |
+| [`references/la-cronaca.md`](references/la-cronaca.md) | Le Scoperte, Lo Specchio y La Risposta: esquemas, ejemplos y estilo del informe. |

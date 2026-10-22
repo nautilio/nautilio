@@ -109,6 +109,9 @@ def test_escuchar_cuenta_visibilidad_share_of_voice_y_citas() -> None:
     assert escucha["share_of_voice"] == 33.3
     assert escucha["posicion_promedio"] == 2.0
     assert escucha["citas_propias"] == 1
+    assert len(escucha["apariciones"]) == 2
+    assert {a["prompt_id"] for a in escucha["apariciones"]} <= {p.id for p in PREGUNTAS}
+    assert sum(a["posicion"] for a in escucha["apariciones"]) / 2 == 2.0
 
 
 def test_brechas_y_la_risposta_desde_el_paradiso() -> None:

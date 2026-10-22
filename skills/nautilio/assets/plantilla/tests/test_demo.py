@@ -60,6 +60,28 @@ def test_la_narracion_usa_cifras_del_codigo(tmp_path: Path) -> None:
     texto = "\n".join(lineas)
     assert "el Lete borró 4 datos personales" in texto
     assert "6 anuncios: 4 creativos únicos" in texto
+    assert "2 hallazgos con su cita; 1 descartado" in texto
+    assert "2 perfiles sociales enlazados" in texto
     assert "make capture" in texto
     manifiesto = json.loads((tmp_path / "raw" / "manifest.json").read_text(encoding="utf-8"))
     assert manifiesto
+
+
+def test_la_cronaca_de_prueba_llega_completa(tmp_path: Path) -> None:
+    # Act
+    resultado = recorrer(destino=tmp_path, paso=0)
+
+    # Assert
+    pagina = resultado.cronaca.read_text(encoding="utf-8")
+    for seccion in (
+        "Le Scoperte",
+        "Lo Specchio",
+        "Le Muse",
+        "lo que responden los asistentes",
+        "La Risposta",
+        "Cómo se hizo",
+    ):
+        assert seccion in pagina
+    assert "Tiene tiendas en cinco países." not in pagina
+    assert "1 hallazgo se descartó" in pagina
+    assert "Para completar el viaje" not in pagina
