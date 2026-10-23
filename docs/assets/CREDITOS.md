@@ -27,3 +27,6 @@ SOFTWARE.
 ```
 
 Fuente: https://github.com/wheresryan22/anatomy
+
+`arquitectura.png` es la captura de un diagrama hecho con un generador de diagramas de
+arquitectura de código abierto (licencia MIT). La imagen no incluye su código.

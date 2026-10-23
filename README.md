@@ -8,11 +8,18 @@
 
 <p align="center">
     <img alt="Agent Skill" src="https://img.shields.io/badge/Agent-Skill-15110D?style=flat">
-    <img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-5E554A?style=flat">
+    <a href="https://skills.sh/nautilio/nautilio"><img alt="En skills.sh" src="https://img.shields.io/badge/skills.sh-nautilio-15110D?style=flat"></a>
+    <img alt="Versión 2.2" src="https://img.shields.io/badge/versión-2.2-9B3A1E?style=flat">
+    <img alt="Python 3.13" src="https://img.shields.io/badge/python-3.13-5E554A?style=flat">
+    <img alt="Gestor uv" src="https://img.shields.io/badge/gestor-uv-5E554A?style=flat">
+    <img alt="Sin dependencias de Node" src="https://img.shields.io/badge/Node-no_necesita-5E554A?style=flat">
+    <a href="LICENSE"><img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-5E554A?style=flat"></a>
 </p>
 
 <p align="center">
     <a href="#el-viaje"><strong>El viaje</strong></a>
+    &middot;
+    <a href="#la-arquitectura"><strong>La arquitectura</strong></a>
     &middot;
     <a href="#el-mapa"><strong>El mapa</strong></a>
     &middot;
@@ -59,6 +66,19 @@ compartirlo, qué anuncia) y la resolución: acciones en orden, con esfuerzo y p
 <p align="center">
     <img alt="El mapa del viaje: Il Viaggio, Le Muse y L'Eco desembocan en La Cronaca" src="docs/assets/flujo.svg">
 </p>
+
+## La arquitectura
+
+Cada caja lleva arriba su nombre en el viaje y abajo el término técnico.
+
+<p align="center">
+    <img alt="Arquitectura de Nautilio: el sitio público pasa por Inferno, Purgatorio y Paradiso (bronze, silver y gold); Le Muse y L'Eco alimentan a tu agente; Le Scoperte deja pasar solo lo que tiene cita y La Cronaca lo entrega a quien decide" src="docs/assets/arquitectura.png" width="900">
+</p>
+
+El sitio público pasa por el Inferno (bronze), cruza el Lete en el Purgatorio (silver) y llega
+al Paradiso (gold), que sirve como corpus para RAG. Le Muse y L'Eco suman la pauta y lo que
+dicen los asistentes. Tu agente redacta hallazgos y acciones, y Le Scoperte solo deja pasar
+lo que tiene cita literal en el sitio.
 
 ## El mapa
 
