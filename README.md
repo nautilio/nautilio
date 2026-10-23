@@ -69,8 +69,6 @@ compartirlo, qué anuncia) y la resolución: acciones en orden, con esfuerzo y p
 
 ## La arquitectura
 
-Cada caja lleva arriba su nombre en el viaje y abajo el término técnico.
-
 <p align="center">
     <img alt="Arquitectura de Nautilio: el sitio público pasa por Inferno, Purgatorio y Paradiso (bronze, silver y gold); Le Muse y L'Eco alimentan a tu agente; Le Scoperte deja pasar solo lo que tiene cita y La Cronaca lo entrega a quien decide" src="docs/assets/arquitectura.png" width="900">
 </p>
